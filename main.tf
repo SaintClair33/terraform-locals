@@ -6,7 +6,7 @@ provider "aws" {
 locals {
   team        = "api_mgmt_dev"
   application = "corp_api"
-  server_name = "ec2-${var.environment}-api-${var.public_sub_az}"
+  server_name = "ec2-${var.environment}-api-${var.variables_sub_az}"
 }
 
 #Retrieve the list of AZs in the current AWS region
@@ -24,7 +24,6 @@ data "aws_ami" "ubuntu_16_04" {
 
   owners = ["099720109477"]
 }
-
 
 #Define the VPC
 resource "aws_vpc" "vpc" {

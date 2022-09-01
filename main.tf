@@ -1,3 +1,10 @@
+/*
+Name: IaC Buildout for projects
+Description: AWS Infrastrcture Design
+Contributors: SaintClair33
+*/
+
+
 # Configure the AWS Provider
 provider "aws" {
   region = "us-east-1"

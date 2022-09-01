@@ -46,3 +46,8 @@ variable "variables_sub_auto_ip" {
   type        = bool
   default     = true
 }
+
+variable "environment" {
+  description = "SDLC env type"
+  default     = "dev"
+}

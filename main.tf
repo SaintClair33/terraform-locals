@@ -8,6 +8,14 @@ Contributors: SaintClair33
 # Configure the AWS Provider
 provider "aws" {
   region = "us-east-1"
+  default_tags {
+    tags = {
+      Environment = terraform.workspace
+      Owner       = "TF Hands On Lab"
+      Project     = "Infrastructure as Code"
+      Terraform   = "true"
+    }
+  }
 }
 
 locals {
@@ -174,11 +182,11 @@ resource "tls_private_key" "generated" {
 }
 resource "local_file" "private_key_pem" {
   content  = tls_private_key.generated.private_key_pem
-  filename = "MyAWSKey.pem"
+  filename = "MyAWSKey1.pem"
 }
 
 resource "aws_key_pair" "generated" {
-  key_name   = "MyAWSKey"
+  key_name   = "MyAWSKey1"
   public_key = tls_private_key.generated.public_key_openssh
   lifecycle {
     ignore_changes = [key_name]
@@ -286,4 +294,55 @@ resource "aws_instance" "ubuntu_server" {
   lifecycle {
     ignore_changes = [security_groups]
   }
+}
+
+module "server" {
+  source          = "./modules/server"
+  ami             = data.aws_ami.ubuntu_16_04.id
+  size            = "t2.micro"
+  subnet_id       = aws_subnet.public_subnets["public_subnet_3"].id
+  security_groups = [aws_security_group.vpc-ping.id, aws_security_group.ingress-ssh.id, aws_security_group.vpc-web.id]
+}
+
+module "server_subnet_1" {
+  source      = "./modules/web_server"
+  ami         = data.aws_ami.ubuntu_16_04.id
+  key_name    = aws_key_pair.generated.key_name
+  user        = "ubuntu"
+  private_key = tls_private_key.generated.private_key_pem
+  subnet_id   = aws_subnet.public_subnets["public_subnet_1"].id
+  security_groups = [aws_security_group.vpc-ping.id,
+    aws_security_group.ingress-ssh.id,
+  aws_security_group.vpc-web.id]
+}
+
+module "autoscaling" {
+  source = "github.com/terraform-aws-modules/terraform-aws-autoscaling"
+  # Autoscaling group
+  name = "myasg"
+  vpc_zone_identifier = [aws_subnet.private_subnets["private_subnet_1"].id,
+    aws_subnet.private_subnets["private_subnet_2"].id,
+  aws_subnet.private_subnets["private_subnet_3"].id]
+  min_size         = 0
+  max_size         = 1
+  desired_capacity = 1
+  # Launch template
+  #use_lt        = true
+  #create_lt     = true
+  image_id      = data.aws_ami.ubuntu_16_04.id
+  instance_type = "t3.micro"
+  tags = {
+    Name = "Web EC2 Server 2"
+  }
+}
+
+output "public_ip" {
+  value = module.server_subnet_1.public_ip
+}
+output "public_dns" {
+  value = module.server.public_dns
+}
+output "size" {
+  description = "Size of server built with Server Module"
+  value = module.server.size
 }
